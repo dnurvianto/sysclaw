@@ -1,0 +1,26 @@
+[Unit]
+Description=SysClaw - Lean, Zero-DB Server Orchestrator & AI ChatOps Daemon
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# User can be root or a dedicated user (e.g., sysclaw)
+User=root
+WorkingDirectory=/opt/sysclaw
+ExecStart=/usr/bin/python3 /opt/sysclaw/bot.py
+Restart=always
+RestartSec=5s
+
+# Safe Resource Guardrails (Prevent OOM Killer & CPU hogging on shared servers)
+MemoryMax=64M
+MemoryHigh=48M
+CPUQuota=10%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sysclaw
+
+[Install]
+WantedBy=multi-user.target
