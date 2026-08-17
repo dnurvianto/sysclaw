@@ -55,13 +55,17 @@ Modern AI agent frameworks (AutoGPT, CrewAI, OpenClaw) are often **too bloated, 
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+> ℹ️ **Default State**: After cloning/installing, SysClaw is completely **OFF / Inactive** (0 running processes). It will only start after you configure credentials and explicitly invoke the CLI.
+
+### 1. Clone & Enable CLI
 ```bash
 git clone https://github.com/dnurvianto/sysclaw.git /opt/sysclaw
 cd /opt/sysclaw
+sudo ln -sf /opt/sysclaw/sysclaw /usr/local/bin/sysclaw
+sudo chmod +x /opt/sysclaw/sysclaw
 ```
 
-### 2. Configure Environment
+### 2. Configure Credentials (`.env`)
 ```bash
 cp .env.example .env
 nano .env
@@ -71,17 +75,24 @@ Fill in your credentials:
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 ALLOWED_CHAT_IDS=8279738173
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-AI_MODEL=deepseek-chat
+AI_MODEL=deepseek-v4-flash
 ```
 
-### 3. Run Pre-Flight Diagnostic
+### 3. Test Environment Readiness
 ```bash
-bash preflight.sh
+sysclaw test
 ```
 
-### 4. Start SysClaw
+### 4. Turn ON Daemon (Systemd Background Service)
 ```bash
-python3 bot.py
+sudo sysclaw install-service
+sudo sysclaw start
+```
+
+### 5. Verify & Inspect
+```bash
+sysclaw status
+sysclaw logs -f
 ```
 
 ---
