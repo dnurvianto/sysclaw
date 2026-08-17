@@ -169,11 +169,23 @@ Tested and verified out-of-the-box on:
 
 ---
 
-## 🤝 Ecosystem Synergy
+## 💡 Real-World Use Case: Managing Logwall via SysClaw
 
-SysClaw is part of a modular infrastructure stack:
-* 🛡️ **`Logwall`** — *The Shield*: Kernel & IPSet level firewall, brute-force & aggressive crawler defense.
-* 🐾 **`SysClaw`** — *The Command*: Pocket SRE, remote host inspection, and AI ChatOps orchestrator.
+While SysClaw is completely standalone and vendor-agnostic, its modular architecture makes it effortless to monitor and control server defense tools like **[Logwall](https://github.com/dnurvianto/logwall)** (Kernel & IPSet-level security blocker).
+
+### Example Integration (`menus/logwall_status.py`):
+```python
+from core.router import register_menu
+from targets.local_host import LocalHostTarget
+
+@register_menu("🛡️ Logwall Status", row=2)
+def handle_logwall_status(chat_id: str) -> str:
+    # Query active blocked IPs from Logwall IPSet
+    output = LocalHostTarget.exec_cmd(["ipset", "list", "BLACKLIST_SET", "-terse"])
+    return f"🛡️ **[Logwall Defense Status]**\n```\n{output}\n```"
+```
+
+*SysClaw's auto-discovery automatically picks up this new file without touching any core code!*
 
 ---
 
