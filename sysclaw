@@ -46,12 +46,13 @@ usage() {
     echo -e "  ${GREEN}logs${NC} [-f] [-n N]   View service logs (journalctl wrapper)"
     echo -e "  ${GREEN}test${NC} | ${GREEN}doctor${NC}    Run pre-flight environment & API diagnostics"
     echo -e "  ${GREEN}install-service${NC}  Install and register systemd service"
+    echo -e "  ${GREEN}uninstall${NC}        Stop daemon and remove systemd service & CLI"
     echo -e "  ${GREEN}version${NC}          Display SysClaw version"
     echo -e "  ${GREEN}help${NC}             Show this help message\n"
     echo -e "${BOLD}Examples:${NC}"
     echo -e "  sysclaw status"
     echo -e "  sysclaw logs -f"
-    echo -e "  sysclaw test\n"
+    echo -e "  sysclaw uninstall\n"
 }
 
 require_root() {
@@ -155,6 +156,60 @@ cmd_install_service() {
     echo -e "${GREEN}[✓] Service successfully installed and enabled at ${UNIT_PATH}.${NC}"
 }
 
+cmd_uninstall() {
+    require_root
+    echo -e "${YELLOW}=====================================================${NC}"
+    echo -e "${BOLD} ⚠️  SysClaw Full Uninstaller${NC}"
+    echo -e "${YELLOW}=====================================================${NC}"
+    echo -e "This will stop the daemon, remove systemd services, and remove CLI symlinks.\n"
+    
+    # Check if run with -y or --yes flag
+    if [ "${2:-}" = "-y" ] || [ "${2:-}" = "--yes" ]; then
+        confirm="y"
+    else
+        read -p "Are you sure you want to uninstall SysClaw? [y/N]: " confirm
+    fi
+
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo -e "${GREEN}[*] Uninstallation cancelled.${NC}"
+        exit 0
+    fi
+
+    echo -e "\n${CYAN}[1/4] Stopping SysClaw daemon...${NC}"
+    cmd_stop >/dev/null 2>&1 || true
+
+    echo -e "${CYAN}[2/4] Removing systemd service unit...${NC}"
+    if [ -f "$UNIT_PATH" ]; then
+        systemctl disable sysclaw.service 2>/dev/null || true
+        rm -f "$UNIT_PATH"
+        systemctl daemon-reload
+        echo -e "${GREEN}[✓] Systemd unit removed.${NC}"
+    fi
+
+    echo -e "${CYAN}[3/4] Removing global CLI symlink...${NC}"
+    if [ -L "/usr/local/bin/sysclaw" ]; then
+        rm -f "/usr/local/bin/sysclaw"
+        echo -e "${GREEN}[✓] Removed /usr/local/bin/sysclaw symlink.${NC}"
+    fi
+
+    echo -e "${CYAN}[4/4] Directory cleanup...${NC}"
+    if [ "${2:-}" = "-y" ] || [ "${2:-}" = "--yes" ]; then
+        rm_dir="n"
+    else
+        read -p "Do you also want to remove SysClaw directory (${SYSCLAW_DIR}) and .env? [y/N]: " rm_dir
+    fi
+
+    if [[ "$rm_dir" =~ ^[Yy]$ ]]; then
+        echo -e "${RED}[*] Deleting ${SYSCLAW_DIR}...${NC}"
+        rm -rf "$SYSCLAW_DIR"
+        echo -e "${GREEN}[✓] Directory deleted.${NC}"
+    else
+        echo -e "${BLUE}[*] Kept ${SYSCLAW_DIR} files on disk.${NC}"
+    fi
+
+    echo -e "\n${GREEN}🎉 SysClaw has been successfully uninstalled.${NC}"
+}
+
 case "${1:-}" in
     status)
         cmd_status
@@ -176,6 +231,9 @@ case "${1:-}" in
         ;;
     install-service)
         cmd_install_service
+        ;;
+    uninstall)
+        cmd_uninstall "$@"
         ;;
     version|-v|--version)
         echo "SysClaw CLI v${VERSION}"

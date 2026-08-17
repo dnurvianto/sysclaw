@@ -180,6 +180,7 @@ sudo chmod +x /opt/sysclaw/sysclaw
 | `sysclaw logs -f` | Stream live real-time service logs |
 | `sysclaw test` / `doctor` | Run pre-flight environment & API diagnostics |
 | `sysclaw install-service` | Install and enable the systemd unit automatically |
+| `sysclaw uninstall` | Stop daemon and completely remove systemd unit & CLI symlinks |
 | `sysclaw version` | Show current SysClaw version (`v1.1.0`) |
 | `sysclaw help` | Display available CLI commands |
 
