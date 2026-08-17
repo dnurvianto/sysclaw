@@ -9,7 +9,7 @@ import os
 import platform
 import shutil
 import subprocess
-from typing import Dict, Any, List
+from typing import Dict, List
 from .base import BaseTarget
 
 class LocalHostTarget(BaseTarget):

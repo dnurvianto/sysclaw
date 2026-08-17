@@ -10,7 +10,7 @@ import sys
 import time
 import signal
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 import config
@@ -37,6 +37,7 @@ def signal_handler(sig, frame):
     global RUNNING
     print("\n[SYSCLAW] Shutdown signal received, terminating workers...", flush=True)
     RUNNING = False
+    executor.shutdown(wait=False)
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -48,7 +49,7 @@ def build_system_prompt() -> str:
     return (
         f"You are SysClaw, an intelligent AI DevOps assistant and Pocket SRE for Linux servers.\n"
         f"Host Environment: {os_name}\n"
-        f"Server Timestamp: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+        f"Server Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
         f"Operational Directives:\n"
         f"1. Answer technical questions, system diagnostics, and log analysis concisely, accurately, and to the point.\n"
         f"2. Provide safe, verified, and parameterized Linux shell recommendations.\n"

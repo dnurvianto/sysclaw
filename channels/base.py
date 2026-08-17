@@ -23,3 +23,8 @@ class BaseChannel:
     def send_action(self, chat_id: Any, action: str = "typing") -> None:
         """Indicate activity status (e.g. typing indicator)."""
         pass
+
+    def answer_callback(self, callback_id: str, text: str = None, alert: bool = False) -> None:
+        """Acknowledge a platform-specific callback or interaction event."""
+        pass
+

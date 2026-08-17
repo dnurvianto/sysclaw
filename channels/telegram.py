@@ -5,7 +5,6 @@ Implements Telegram Bot API communication using pure Python standard library.
 
 import json
 import urllib.request
-import urllib.parse
 import urllib.error
 from typing import Dict, Any, List, Optional
 import config

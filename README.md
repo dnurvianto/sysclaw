@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check) • [Deployment](#-systemd-daemon-deployment)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check) • [Deployment](#-systemd-daemon-deployment)
 
 ---
 
