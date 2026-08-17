@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check) • [Deployment](#-systemd-daemon-deployment)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check)
 
 ---
 
@@ -181,8 +181,40 @@ sudo chmod +x /opt/sysclaw/sysclaw
 | `sysclaw test` / `doctor` | Run pre-flight environment & API diagnostics |
 | `sysclaw install-service` | Install and enable the systemd unit automatically |
 | `sysclaw uninstall` | Stop daemon and completely remove systemd unit & CLI symlinks |
-| `sysclaw version` | Show current SysClaw version (`v1.1.0`) |
+| `sysclaw version` | Show current SysClaw version (`v1.2.0`) |
 | `sysclaw help` | Display available CLI commands |
+
+---
+
+## 🧠 Dynamic Knowledge Base (`docs/`)
+
+SysClaw features an **autonomous Domain Knowledge Ingestion Engine** that bridges server-specific operational context directly to the AI reasoning model without fine-tuning or code changes.
+
+### How It Works
+1. Place any Markdown file (`.md`) inside the `docs/` directory:
+   ```bash
+   cp docs/server_topology.example.md docs/01_topology.md
+   nano docs/01_topology.md
+   ```
+2. SysClaw automatically reads, parses, and injects all active `.md` documents into the AI system prompt on the fly.
+3. Use it to feed:
+   - 🗺️ **Node Topology**: Cluster server lists, public/internal IPs, custom SSH ports.
+   - 📘 **SRE Playbooks & SOPs**: Step-by-step procedures for handling high memory, Nginx stalls, or backup rotations.
+   - 🛡️ **Firewall & Security Policies**: Whitelisted subnets and Logwall blocker configurations.
+   - 🗄️ **Database & Cron Schedules**: Critical cron timings and maintenance guidelines.
+
+*Guardrail Protection: The ingestion engine includes an automatic 50,000-character safety ceiling to prevent token window overflow.*
+
+---
+
+## 🤖 Dynamic AI Models & Multi-Tier Engines
+
+Operators can dynamically toggle between inference engines directly in Telegram via the interactive `⚡ Model AI` menu button without restarting the daemon:
+
+| Tier / Model ID | Best For | Characteristics |
+| :--- | :--- | :--- |
+| **⚡ `deepseek-v4-flash`** | High Throughput / Routine DevOps | Sub-second latency (<500ms), lightweight token burn, quick configuration & log checks |
+| **🔬 `deepseek-v4-pro`** | Deep Reasoning / Incident SRE | High-capacity problem solving, intricate multi-step diagnostics, root-cause forensics |
 
 ---
 

@@ -15,7 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import config
 from core.security import is_authorized, is_rate_limited
-from core.memory import get_history, add_message, clear_history
+from core.memory import get_history, add_message, clear_history, get_user_model
+from core.knowledge import load_knowledge_base
 from core.router import get_main_keyboard, get_menu_handler, get_action_handler
 from providers import get_ai_provider
 from channels import get_channel
@@ -46,7 +47,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 def build_system_prompt() -> str:
     """Constructs dynamic context prompt for the AI reasoning engine."""
     os_name = target_node.get_os_info()
-    return (
+    prompt = (
         f"You are SysClaw, an intelligent AI DevOps assistant and Pocket SRE for Linux servers.\n"
         f"Host Environment: {os_name}\n"
         f"Server Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
@@ -56,6 +57,13 @@ def build_system_prompt() -> str:
         f"3. Automatically respond in the same language used by the user (English, Indonesian, etc.).\n"
         f"4. If the user asks for general assistance, explain the available menu buttons on the Telegram keyboard."
     )
+
+    # Ingest custom markdown documentation from docs/ if present
+    docs_context = load_knowledge_base()
+    if docs_context:
+        prompt += f"\n\n--- OFFICIAL INFRASTRUCTURE & DOMAIN KNOWLEDGE ---\n{docs_context}"
+
+    return prompt
 
 def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     """Worker task to process a single user message asynchronously."""
@@ -69,15 +77,15 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
             f"🐾 **Welcome to SysClaw!**\n"
             f"*A Lean, Zero-DB Server Orchestrator & AI ChatOps Scaffold*\n\n"
             f"Use the menu buttons below to inspect server health metrics, "
-            f"or send any text query to consult with AI ({config.AI_MODEL})."
+            f"or send any text query to consult with AI ({get_user_model(str(chat_id))})."
         )
-        telegram.send_message(chat_id, welcome, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+        telegram.send_message(chat_id, welcome, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         return
 
     # Check for /reset, /clear
     if text.startswith("/reset") or text.startswith("/clear"):
         clear_history(str(chat_id))
-        telegram.send_message(chat_id, "🧹 **[Memory Reset]** Conversational context memory buffer in RAM has been cleared.", reply_markup=get_main_keyboard(), parse_mode="Markdown")
+        telegram.send_message(chat_id, "🧹 **[Memory Reset]** Conversational context memory buffer in RAM has been cleared.", reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         return
 
     # Check for deterministic menu match (Track 1: Fast & 0 Token)
@@ -85,15 +93,16 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     if menu_func:
         try:
             reply = menu_func(str(chat_id))
-            telegram.send_message(chat_id, reply, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+            if reply:
+                telegram.send_message(chat_id, reply, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         except Exception as e:
             print(f"[MENU ERROR] {traceback.format_exc()}", flush=True)
-            telegram.send_message(chat_id, "⚠️ [Menu Error] An error occurred while executing the menu action.", reply_markup=get_main_keyboard())
+            telegram.send_message(chat_id, "⚠️ [Menu Error] An error occurred while executing the menu action.", reply_markup=get_main_keyboard(chat_id))
         return
 
     # Rate Limiting Check for AI Calls (Prevent Token Flooding)
     if is_rate_limited(chat_id):
-        telegram.send_message(chat_id, "⏳ Rate limit reached. Please wait a moment before sending your next AI request.", reply_markup=get_main_keyboard())
+        telegram.send_message(chat_id, "⏳ Rate limit reached. Please wait a moment before sending your next AI request.", reply_markup=get_main_keyboard(chat_id))
         return
 
     # Track 2: Smart LLM Reasoning (DeepSeek AI)
@@ -104,10 +113,11 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     
     history = get_history(str(chat_id))
     system_prompt = build_system_prompt()
+    user_model = get_user_model(str(chat_id))
     
     try:
-        # Query AI provider
-        ai_reply = ai_provider.chat(history, system_prompt=system_prompt)
+        # Query AI provider with user's selected engine
+        ai_reply = ai_provider.chat(history, system_prompt=system_prompt, model=user_model)
     except Exception as e:
         print(f"[AI PROVIDER EXCEPTION] {traceback.format_exc()}", flush=True)
         ai_reply = "⚠️ [AI Error] Failed to reach the configured AI provider. Please check server logs."
@@ -115,7 +125,7 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     # Save assistant response to memory
     add_message(str(chat_id), "assistant", ai_reply)
     
-    telegram.send_message(chat_id, ai_reply, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+    telegram.send_message(chat_id, ai_reply, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
 
 def handle_incoming_callback(callback_query: dict):
     """Worker task to process inline keyboard clicks."""
@@ -135,7 +145,7 @@ def handle_incoming_callback(callback_query: dict):
             res = handler(str(chat_id), data)
             telegram.answer_callback(cb_id)
             if res:
-                telegram.send_message(chat_id, res, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+                telegram.send_message(chat_id, res, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         except Exception as e:
             print(f"[ACTION ERROR] {traceback.format_exc()}", flush=True)
             telegram.answer_callback(cb_id, text="Action execution failed.", alert=True)
@@ -146,7 +156,7 @@ def main():
     """Main execution loop (HTTP Long Polling)."""
     print("=" * 65)
     print(" 🐾 SysClaw - Server Orchestrator & AI ChatOps Scaffold")
-    print(f" 🚀 Version: 1.1.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
+    print(f" 🚀 Version: 1.2.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
     print(f" 🐧 Host OS: {target_node.get_os_info()}")
     print("=" * 65, flush=True)
 

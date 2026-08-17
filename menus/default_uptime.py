@@ -11,7 +11,7 @@ from targets import get_target_node
 # Module-level cached target instance (avoids re-instantiation per button press)
 _target = get_target_node("localhost")
 
-@register_menu("⏱️ Host Overview", row=1)
+@register_menu("🖥️ Host Overview", row=1)
 def handle_uptime_menu(chat_id: str) -> str:
     """Collects and formats the local host server health metrics."""
     os_name = _target.get_os_info()
@@ -34,7 +34,7 @@ def handle_uptime_menu(chat_id: str) -> str:
     )
     return msg
 
-@register_menu("🧹 Clear Memory", row=2)
+@register_menu("🧹 Reset Memory", row=1)
 def handle_reset_memory(chat_id: str) -> str:
     """Clears the conversational context buffer in RAM."""
     clear_history(chat_id)

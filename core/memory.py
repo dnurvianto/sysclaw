@@ -7,8 +7,9 @@ Zero setup, zero SQL/Redis dependencies, ultra-lightweight.
 from typing import List, Dict
 import config
 
-# In-memory storage dictionary: {chat_id: [{"role": "user"/"assistant", "content": "..."}]}
+# In-memory storage dictionaries
 _CHAT_BUFFERS: Dict[str, List[Dict[str, str]]] = {}
+_USER_MODELS: Dict[str, str] = {}
 
 def get_history(chat_id: str) -> List[Dict[str, str]]:
     """Retrieve conversation history for a given chat_id."""
@@ -36,3 +37,12 @@ def clear_history(chat_id: str) -> None:
     key = str(chat_id)
     if key in _CHAT_BUFFERS:
         _CHAT_BUFFERS[key] = []
+
+def get_user_model(chat_id: str) -> str:
+    """Retrieve the selected AI model for a user (defaults to config.AI_MODEL)."""
+    return _USER_MODELS.get(str(chat_id), config.AI_MODEL)
+
+def set_user_model(chat_id: str, model_name: str) -> None:
+    """Set the active AI model for a specific user session."""
+    _USER_MODELS[str(chat_id)] = model_name.strip()
+

@@ -19,9 +19,11 @@ class DeepSeekProvider(BaseAIProvider):
         self.api_key = api_key or config.DEEPSEEK_API_KEY
         self.model = model or config.AI_MODEL or "deepseek-chat"
 
-    def chat(self, messages: List[Dict[str, str]], system_prompt: str = "") -> str:
+    def chat(self, messages: List[Dict[str, str]], system_prompt: str = "", model: str = None) -> str:
         if not self.api_key:
             return "⚠️ [DeepSeek Error] DEEPSEEK_API_KEY is not configured in .env!"
+
+        active_model = model or self.model or config.AI_MODEL or "deepseek-v4-flash"
 
         # Prepare payload
         payload_messages = []
@@ -31,7 +33,7 @@ class DeepSeekProvider(BaseAIProvider):
         payload_messages.extend(messages)
 
         data = {
-            "model": self.model,
+            "model": active_model,
             "messages": payload_messages,
             "stream": False
         }
