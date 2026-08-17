@@ -70,7 +70,7 @@ cmd_status() {
     else
         echo -e "${YELLOW}Systemd unit not registered at ${UNIT_PATH}.${NC}"
         echo -n "Checking manual processes: "
-        PIDS=$(pgrep -f "python.*bot\.py" || true)
+        PIDS=$(pgrep -f "python.*${SYSCLAW_DIR}/bot\.py" || true)
         if [ -n "$PIDS" ]; then
             echo -e "${GREEN}Running (PID: $PIDS)${NC}"
         else
@@ -97,8 +97,8 @@ cmd_stop() {
     if command -v systemctl &>/dev/null && [ -f "$UNIT_PATH" ]; then
         systemctl stop sysclaw
     fi
-    # Also kill any orphan manual process
-    pkill -f "python.*bot\.py" 2>/dev/null || true
+    # Also kill any orphan manual process strictly under this SysClaw directory
+    pkill -f "python.*${SYSCLAW_DIR}/bot\.py" 2>/dev/null || true
     echo -e "${GREEN}[✓] SysClaw service stopped.${NC}"
 }
 
