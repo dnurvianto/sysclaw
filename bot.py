@@ -146,7 +146,7 @@ def main():
     """Main execution loop (HTTP Long Polling)."""
     print("=" * 65)
     print(" 🐾 SysClaw - Server Orchestrator & AI ChatOps Scaffold")
-    print(f" 🚀 Version: 1.0.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
+    print(f" 🚀 Version: 1.1.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
     print(f" 🐧 Host OS: {target_node.get_os_info()}")
     print("=" * 65, flush=True)
 

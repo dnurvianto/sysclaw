@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  🐾 SysClaw CLI - Server Orchestrator & ChatOps Control Utility
+#  https://github.com/dnurvianto/sysclaw
+# ==============================================================================
+
+set -e
+
+VERSION="1.1.0"
+
+# Colors
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+YELLOW="\033[1;33m"
+BLUE="\033[0;34m"
+CYAN="\033[0;36m"
+BOLD="\033[1m"
+NC="\033[0m"
+
+# Resolve script installation directory (supports symlinks)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SYSCLAW_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+
+SERVICE_NAME="sysclaw.service"
+UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}"
+
+print_header() {
+    echo -e "${BLUE}=====================================================${NC}"
+    echo -e "${BOLD} 🐾 SysClaw CLI ${CYAN}v${VERSION}${NC} - Server Orchestrator Control"
+    echo -e "${BLUE}=====================================================${NC}"
+}
+
+usage() {
+    print_header
+    echo -e "Usage: ${BOLD}sysclaw${NC} <command> [options]\n"
+    echo -e "${BOLD}Commands:${NC}"
+    echo -e "  ${GREEN}status${NC}           Show live daemon status, PID, and resource metrics"
+    echo -e "  ${GREEN}start${NC}            Start the SysClaw background daemon"
+    echo -e "  ${GREEN}stop${NC}             Stop the SysClaw daemon"
+    echo -e "  ${GREEN}restart${NC}          Restart the SysClaw daemon"
+    echo -e "  ${GREEN}logs${NC} [-f] [-n N]   View service logs (journalctl wrapper)"
+    echo -e "  ${GREEN}test${NC} | ${GREEN}doctor${NC}    Run pre-flight environment & API diagnostics"
+    echo -e "  ${GREEN}install-service${NC}  Install and register systemd service"
+    echo -e "  ${GREEN}version${NC}          Display SysClaw version"
+    echo -e "  ${GREEN}help${NC}             Show this help message\n"
+    echo -e "${BOLD}Examples:${NC}"
+    echo -e "  sysclaw status"
+    echo -e "  sysclaw logs -f"
+    echo -e "  sysclaw test\n"
+}
+
+require_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo -e "${RED}[ERROR] This command requires root / sudo privileges.${NC}"
+        exit 1
+    fi
+}
+
+cmd_status() {
+    print_header
+    if command -v systemctl &>/dev/null && [ -f "$UNIT_PATH" ]; then
+        echo -e "${BOLD}Systemd Service Status:${NC}"
+        systemctl status sysclaw --no-pager || true
+    else
+        echo -e "${YELLOW}Systemd unit not registered at ${UNIT_PATH}.${NC}"
+        echo -n "Checking manual processes: "
+        PIDS=$(pgrep -f "python.*bot\.py" || true)
+        if [ -n "$PIDS" ]; then
+            echo -e "${GREEN}Running (PID: $PIDS)${NC}"
+        else
+            echo -e "${RED}Stopped (Not running)${NC}"
+        fi
+    fi
+}
+
+cmd_start() {
+    require_root
+    if [ ! -f "$UNIT_PATH" ]; then
+        echo -e "${YELLOW}[!] Systemd unit not found. Installing service first...${NC}"
+        cmd_install_service
+    fi
+    echo -e "${CYAN}[*] Starting SysClaw service...${NC}"
+    systemctl start sysclaw
+    echo -e "${GREEN}[✓] SysClaw service started.${NC}"
+    cmd_status
+}
+
+cmd_stop() {
+    require_root
+    echo -e "${CYAN}[*] Stopping SysClaw service...${NC}"
+    if command -v systemctl &>/dev/null && [ -f "$UNIT_PATH" ]; then
+        systemctl stop sysclaw
+    fi
+    # Also kill any orphan manual process
+    pkill -f "python.*bot\.py" 2>/dev/null || true
+    echo -e "${GREEN}[✓] SysClaw service stopped.${NC}"
+}
+
+cmd_restart() {
+    require_root
+    echo -e "${CYAN}[*] Restarting SysClaw service...${NC}"
+    if [ -f "$UNIT_PATH" ]; then
+        systemctl restart sysclaw
+        echo -e "${GREEN}[✓] SysClaw service restarted.${NC}"
+        cmd_status
+    else
+        cmd_stop
+        cmd_start
+    fi
+}
+
+cmd_logs() {
+    shift 1 2>/dev/null || true
+    if command -v journalctl &>/dev/null; then
+        echo -e "${CYAN}[*] Displaying SysClaw logs (Press Ctrl+C to exit)...${NC}"
+        journalctl -u sysclaw -u sysclaw.service "$@"
+    else
+        echo -e "${RED}[ERROR] journalctl command not available on this system.${NC}"
+        exit 1
+    fi
+}
+
+cmd_test() {
+    if [ -f "${SYSCLAW_DIR}/preflight.sh" ]; then
+        bash "${SYSCLAW_DIR}/preflight.sh"
+    else
+        echo -e "${RED}[ERROR] preflight.sh not found in ${SYSCLAW_DIR}${NC}"
+        exit 1
+    fi
+}
+
+cmd_install_service() {
+    require_root
+    echo -e "${CYAN}[*] Installing SysClaw systemd service...${NC}"
+    
+    if [ ! -f "${SYSCLAW_DIR}/systemd/sysclaw.service" ]; then
+        echo -e "${RED}[ERROR] Template systemd/sysclaw.service not found in ${SYSCLAW_DIR}${NC}"
+        exit 1
+    fi
+
+    # Copy template and adjust working directory if installed outside /opt/sysclaw
+    cp "${SYSCLAW_DIR}/systemd/sysclaw.service" "$UNIT_PATH"
+    
+    if [ "$SYSCLAW_DIR" != "/opt/sysclaw" ]; then
+        sed -i "s|/opt/sysclaw|${SYSCLAW_DIR}|g" "$UNIT_PATH"
+    fi
+
+    systemctl daemon-reload
+    systemctl enable sysclaw.service
+    echo -e "${GREEN}[✓] Service successfully installed and enabled at ${UNIT_PATH}.${NC}"
+}
+
+case "${1:-}" in
+    status)
+        cmd_status
+        ;;
+    start)
+        cmd_start
+        ;;
+    stop)
+        cmd_stop
+        ;;
+    restart)
+        cmd_restart
+        ;;
+    logs|log)
+        cmd_logs "$@"
+        ;;
+    test|doctor|preflight)
+        cmd_test
+        ;;
+    install-service)
+        cmd_install_service
+        ;;
+    version|-v|--version)
+        echo "SysClaw CLI v${VERSION}"
+        ;;
+    help|-h|--help|"")
+        usage
+        ;;
+    *)
+        echo -e "${RED}[ERROR] Unknown command: '$1'${NC}\n"
+        usage
+        exit 1
+        ;;
+esac

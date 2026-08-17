@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check) • [Deployment](#-systemd-daemon-deployment)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check) • [Deployment](#-systemd-daemon-deployment)
 
 ---
 
@@ -149,6 +149,31 @@ sudo journalctl -u sysclaw -f
 
 ---
 
+## 💻 SysClaw CLI Utility
+
+SysClaw includes a zero-dependency CLI wrapper to easily control the background daemon, inspect logs, and run diagnostics without memorizing raw systemd commands.
+
+### Enable Global CLI Access
+```bash
+sudo ln -sf /opt/sysclaw/sysclaw /usr/local/bin/sysclaw
+sudo chmod +x /opt/sysclaw/sysclaw
+```
+
+### CLI Command Reference
+| Command | Description |
+| :--- | :--- |
+| `sysclaw status` | Display service status, PID, and memory footprint |
+| `sysclaw start` | Start the SysClaw background daemon |
+| `sysclaw stop` | Gracefully stop the running daemon |
+| `sysclaw restart` | Restart SysClaw service |
+| `sysclaw logs -f` | Stream live real-time service logs |
+| `sysclaw test` / `doctor` | Run pre-flight environment & API diagnostics |
+| `sysclaw install-service` | Install and enable the systemd unit automatically |
+| `sysclaw version` | Show current SysClaw version (`v1.1.0`) |
+| `sysclaw help` | Display available CLI commands |
+
+---
+
 ## 🛡️ Security Guardrails
 
 1. **Zero-Trust Whitelist & Silent Drop**:
@@ -191,4 +216,4 @@ def handle_logwall_status(chat_id: str) -> str:
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
