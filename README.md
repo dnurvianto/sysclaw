@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Pre-Flight Check](#-pre-flight-check)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Extending SysClaw](#-pluggable-architecture-extending-sysclaw) • [Pre-Flight Check](#-pre-flight-check)
 
 ---
 
@@ -137,7 +137,55 @@ def handle_docker_status(chat_id: str) -> str:
     return f"🐳 **Docker Containers:**\n```\n{output}\n```"
 ```
 
-*When you ask Claude Code or Cursor: "Add a menu to check Docker containers", the AI will automatically create this file!*
+*When you ask Claude Code, Cursor, or Antigravity: "Add a menu to check Docker containers", the AI will automatically create this file!*
+
+---
+
+## 🔌 Pluggable Architecture: Extending SysClaw
+
+SysClaw is architected for zero-bloat extensibility. Developers and AI agents can extend any layer using pure Python standard library:
+
+### 1. Adding Custom AI Providers (`providers/`)
+Create a new provider adapter by inheriting from `BaseAIProvider`:
+```python
+# providers/ollama.py
+import json, urllib.request
+from typing import List, Dict
+from .base import BaseAIProvider
+
+class OllamaProvider(BaseAIProvider):
+    def __init__(self, model: str = "llama3"):
+        self.model = model
+        self.api_url = "http://127.0.0.1:11434/api/chat"
+
+    def chat(self, messages: List[Dict[str, str]], system_prompt: str = "", model: str = None) -> str:
+        payload = {"model": model or self.model, "messages": messages, "stream": False}
+        req = urllib.request.Request(self.api_url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())["message"]["content"]
+```
+*Register your provider in `providers/__init__.py` to enable switching via `AI_PROVIDER=ollama` in `.env`.*
+
+### 2. Adding Custom Target Nodes (`targets/`)
+Create new execution targets (e.g., Remote SSH Cluster, Docker Containers) by inheriting from `BaseTarget`:
+```python
+# targets/remote_ssh.py
+from typing import List, Dict
+from .base import BaseTarget
+from .local_host import LocalHostTarget
+
+class SSHNodeTarget(BaseTarget):
+    def __init__(self, host_alias: str):
+        self.host_alias = host_alias
+
+    def exec_cmd(self, cmd: List[str], timeout: int = 15) -> str:
+        # Secure parameterized SSH invocation (Zero shell injection)
+        ssh_args = ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", self.host_alias] + cmd
+        return LocalHostTarget.exec_cmd(ssh_args, timeout=timeout)
+```
+
+### 3. Adding Custom Notification Channels (`channels/`)
+Implement alternative delivery channels (WhatsApp, Webhooks, Discord, Slack) by inheriting from `BaseChannel` in `channels/base.py`.
 
 ---
 
