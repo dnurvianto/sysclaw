@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Extending SysClaw](#-pluggable-architecture-extending-sysclaw) • [Pre-Flight Check](#-pre-flight-check)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture--modularity) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Extending SysClaw](#-pluggable-architecture-extending-sysclaw) • [Upgrade Guide](#-safe-customization--seamless-upgrades)
 
 ---
 
@@ -31,25 +31,34 @@ Modern AI agent frameworks (AutoGPT, CrewAI, OpenClaw) are often **too bloated, 
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ Architecture & Modularity
+
+SysClaw is designed with a strict **Decoupled Architecture**: the core kernel is completely agnostic, while DeepSeek and Telegram are provided as ready-to-use **Default Adapters**.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          BASE SYSTEM (Built-in)                         │
+│                        SYSCLAW CORE KERNEL                              │
 │                                                                         │
-│  • Event Loop & HTTP Long Polling (No Inbound Port Binding)             │
-│  • Security Guard (Strict Whitelist Chat ID & Silent Drop)              │
-│  • Dispatcher Router (Menu Buttons vs Inline Actions vs AI Chat)        │
-│  • Storage & Context Buffer (In-Memory RAM / Zero-Database)             │
+│  • Event Loop & HTTP Long Polling Engine (0 open inbound ports)         │
+│  • Security Gatekeeper (Strict Whitelist Chat ID & Silent Drop)         │
+│  • Dispatcher Router (Menu Grid vs Inline Actions vs AI Inquiries)      │
+│  • In-Memory Context Buffer (Zero-DB RAM sliding window)                │
+│  • Dynamic Knowledge Ingestion Engine (Auto-reads docs/*.md)            │
 └──────────────┬──────────────┬──────────────┬──────────────┬─────────────┘
                │              │              │              │
                ▼              ▼              ▼              ▼
-          [ MODUL 1 ]    [ MODUL 2 ]    [ MODUL 3 ]    [ MODUL 4 ]
-           AI PROVIDER      CHANNEL         MENUS         TARGETS
-          (DeepSeek API)  (Telegram)    (Host Uptime)  (Local Host)
+     [ DEFAULT ADAPTER 1 ] [ DEFAULT ADAPTER 2 ] [ MODULAR MENUS ] [ MODULAR TARGETS ]
+         AI PROVIDER            CHANNEL            MENUS           TARGET NODES
+     providers/deepseek.py  channels/telegram.py  menus/*.py       targets/*.py
+       (DeepSeek API)        (Telegram Bot)      (Host Health)    (Local & SSH)
                │              │              │              │
-          (Pluggable)    (Pluggable)    (Pluggable)    (Pluggable)
+          (Swappable)    (Swappable)    (Extensible)   (Extensible)
 ```
+
+### Core Kernel vs Pluggable Layer:
+* **`core/` (Agnostic Core)**: Contains universal logic (`security.py`, `memory.py`, `router.py`, `knowledge.py`). It does not hardcode DeepSeek or Telegram dependencies.
+* **`providers/deepseek.py` (Default AI Adapter)**: Pre-configured out-of-the-box AI provider. Easily swapped with local Ollama, Claude, or OpenAI.
+* **`channels/telegram.py` (Default Chat Adapter)**: Pre-configured communication channel. Easily augmented with WhatsApp or Webhooks.
 
 ---
 
@@ -293,6 +302,25 @@ Tested and verified out-of-the-box on:
 * **Debian / Ubuntu**: Debian 10, 11, 12 | Ubuntu 18.04, 20.04, 22.04, 24.04 LTS
 * **Enterprise RHEL**: AlmaLinux 8/9 | Rocky Linux 8/9 | CentOS Stream & RHEL 7/8/9
 * **Others**: Fedora, Arch Linux, openSUSE, Alpine Linux
+
+## 🧱 Safe Customization & Seamless Upgrades
+
+SysClaw is engineered so that operators and AI agents can safely add custom menus, domain knowledge, and adapters without fear of losing custom code when updating the core framework from upstream.
+
+### 🛡️ The 3 Zero-Conflict Customization Zones:
+| Safe Zone | Location | How to Use | Why It Never Conflicts with `git pull` |
+| :--- | :--- | :--- | :--- |
+| **Custom Menus** | `menus/*.py` | Create new `.py` files with `@register_menu` | Auto-discovery loads new files dynamically; upstream `git pull` will not touch new user files. |
+| **Knowledge Base** | `docs/*.md` | Drop SOPs, cluster topology, or runbooks | Auto-ingested by `core/knowledge.py` without modifying code. |
+| **Secrets & Keys** | `.env` | Configure tokens and credentials | Permanently ignored by `.gitignore`. |
+
+### Recommended Upgrade Workflow:
+Whenever upstream releases new core features or optimizations, simply run:
+```bash
+cd /opt/sysclaw
+git pull origin main
+sudo sysclaw restart
+```
 
 ---
 
