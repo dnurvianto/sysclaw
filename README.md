@@ -218,14 +218,24 @@ Operators can dynamically toggle between inference engines directly in Telegram 
 
 ---
 
-## 🛡️ Security Guardrails
+## 🛡️ Security Guardrails (Defense-in-Depth)
+
+SysClaw is engineered specifically for production Linux environments, enforcing a 4-layer defense-in-depth security model:
 
 1. **Zero-Trust Whitelist & Silent Drop**:
-   Any Telegram user whose `Chat ID` is not in `ALLOWED_CHAT_IDS` is **silently ignored** without any response. No information is leaked to unauthorized probers.
-2. **Safe Shell Execution**:
-   All host commands are executed using parameterized argument lists (`subprocess.run(["cmd", "arg"])`), completely eliminating shell injection vulnerabilities.
-3. **No Direct Autonomous Shell Access for LLM**:
-   DeepSeek AI acts strictly as an **analyst/advisor**. Destructive actions require conscious confirmation via inline buttons.
+   - Any Telegram message or callback from a `Chat ID` not listed in `ALLOWED_CHAT_IDS` is **silently dropped** at Layer 1.
+   - Zero information is leaked to unauthorized probers (no error replies, no metadata leakage).
+
+2. **Human-in-the-Loop Conscious Consent**:
+   - DeepSeek AI **never possesses autonomous direct shell privileges**.
+   - Recommended actions are presented as clear, transparent command proposals requiring conscious approval via interactive inline buttons (`✅ Confirm Execution` / `❌ Cancel`).
+
+3. **Hardened Destructive Command Guardrails**:
+   - Catastrophic and irreversible commands (e.g., `rm -rf /`, `mkfs`, `dd if=/dev/zero`, unconditional disk writes, `chmod -R 777 /`) are intercepted and rejected by safety guardrails.
+
+4. **Parameterized Execution & Isolated Timeouts**:
+   - Host commands execute strictly via parameterized argument lists (`subprocess.run(["cmd", "arg"])`), completely eliminating shell injection vulnerabilities.
+   - Enforced sub-process execution timeouts (default 10s–15s) and systemd memory caps (`MemoryMax=64M`) prevent resource exhaustion or frozen worker threads.
 
 ---
 
