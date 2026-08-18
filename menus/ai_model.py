@@ -81,7 +81,7 @@ def handle_set_model_action(chat_id: str, callback_data: str) -> str:
         return "⚠️ [Error] Malformed model selection payload."
 
     selected_model = parts[1].strip()
-    if selected_model not in SUPPORTED_MODELS and not selected_model:
+    if not selected_model or selected_model not in SUPPORTED_MODELS:
         return f"⚠️ [Error] Model `{selected_model}` is not recognized."
 
     # Update active engine in RAM for this chat session

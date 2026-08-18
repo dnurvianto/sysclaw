@@ -23,7 +23,10 @@ def get_target_node(target_name: str = "localhost") -> BaseTarget:
     if name in _TARGETS:
         return _TARGETS[name]()
 
-    # Try dynamic import if user added targets/<name>.py
+    # Sanitize and validate target name before dynamic import
+    if not name.replace("_", "").isalnum() or name.startswith("_"):
+        return LocalHostTarget()
+
     try:
         mod = importlib.import_module(f".{name}", __package__)
         for attr_name in dir(mod):

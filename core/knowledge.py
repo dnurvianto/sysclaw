@@ -29,10 +29,18 @@ def load_knowledge_base(docs_dir: Path = None) -> str:
     total_chars = 0
 
     try:
+        docs_real_path = docs_dir.resolve()
         # Sort files deterministically (e.g. 01_arch.md, 02_network.md)
         for entry in sorted(os.listdir(docs_dir)):
             if entry.endswith(".md") and not entry.startswith((".", "_")) and not entry.endswith(".example.md"):
-                file_path = docs_dir / entry
+                file_path = (docs_dir / entry).resolve()
+                # Security Check: Prevent symlink traversal out of docs/ directory
+                try:
+                    file_path.relative_to(docs_real_path)
+                except ValueError:
+                    # Symlink points outside docs directory, skip for safety
+                    continue
+
                 if file_path.is_file():
                     try:
                         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:

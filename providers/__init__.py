@@ -22,7 +22,10 @@ def get_ai_provider(provider_name: str = "deepseek") -> BaseAIProvider:
     if name in _PROVIDERS:
         return _PROVIDERS[name]()
     
-    # Try dynamic import if user added providers/<name>.py
+    # Sanitize and validate module name before dynamic import
+    if not name.replace("_", "").isalnum() or name.startswith("_"):
+        return DeepSeekProvider()
+
     try:
         mod = importlib.import_module(f".{name}", __package__)
         for attr_name in dir(mod):

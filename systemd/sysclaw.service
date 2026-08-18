@@ -17,6 +17,12 @@ MemoryMax=64M
 MemoryHigh=48M
 CPUQuota=10%
 
+# Security & Process Sandboxing
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
 # Logging
 StandardOutput=journal
 StandardError=journal

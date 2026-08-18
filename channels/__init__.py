@@ -22,7 +22,10 @@ def get_channel(channel_name: str = "telegram") -> BaseChannel:
     if name in _CHANNELS:
         return _CHANNELS[name]()
 
-    # Try dynamic import if user added channels/<name>.py
+    # Sanitize and validate module name before dynamic import
+    if not name.replace("_", "").isalnum() or name.startswith("_"):
+        return TelegramChannel()
+
     try:
         mod = importlib.import_module(f".{name}", __package__)
         for attr_name in dir(mod):

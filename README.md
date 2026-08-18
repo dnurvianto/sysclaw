@@ -11,7 +11,7 @@
 
 **Pocket SRE & ChatOps Command Center for Linux Servers & Modern DevOps.**
 
-[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture--modularity) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Extending SysClaw](#-pluggable-architecture-extending-sysclaw) • [Upgrade Guide](#-safe-customization--seamless-upgrades)
+[Why SysClaw?](#-why-sysclaw) • [Architecture](#-architecture--modularity) • [Quick Start](#-quick-start) • [CLI Utility](#-sysclaw-cli-utility) • [Knowledge Base](#-dynamic-knowledge-base-docs) • [AI Models](#-dynamic-ai-models--multi-tier-engines) • [Adding Menus](#-how-to-add-custom-menus) • [Extending SysClaw](#-pluggable-architecture-extending-sysclaw) • [Upgrade Guide](#-safe-customization--seamless-upgrades) • [Best Practices](#-security-best-practice-dedicated-management-node-stealth-mode) • [Disclaimer](#-security-notice--prudent-usage-disclaimer)
 
 ---
 
@@ -341,6 +341,45 @@ def handle_logwall_status(chat_id: str) -> str:
 ```
 
 *SysClaw's auto-discovery automatically picks up this new file without touching any core code!*
+
+---
+
+## 💡 Security Best Practice: Dedicated Management Node (Stealth Mode)
+
+For high-security production environments, deploying SysClaw on a **Dedicated Lightweight VPS (512MB–1GB RAM)** turns it into an isolated, tamper-proof **Management Appliance / SRE Command Center**:
+
+### 🥷 1. Total Stealth Mode (Zero Open Inbound Ports)
+Because SysClaw operates exclusively via **outbound HTTP Long Polling** to Telegram and AI APIs over TLS port 443, your server requires **ZERO open inbound web/listening ports**:
+* No Nginx, Apache, or web server open to the public internet.
+* Internet scanners (Shodan, Censys, botnets) will detect 0 open ports (Complete Drop).
+
+### 🛡️ 2. Ultra-Simple 3-Line Firewall (UFW / Iptables)
+You can lock down the host with a simple default-deny policy:
+```bash
+# Block all inbound traffic by default
+sudo ufw default deny incoming
+
+# Allow outbound API polling (Telegram & DeepSeek)
+sudo ufw default allow outgoing
+
+# Restrict SSH access strictly to your management IP / VPN
+sudo ufw allow from YOUR_ADMIN_IP to any port 22 proto tcp
+sudo ufw enable
+```
+
+### 🚫 3. Zero Lateral Movement Risk
+Without web apps (PHP, WordPress, Node.js) or databases running on the same host, the server is completely immune to web-based remote code execution (RCE) or lateral privilege escalation.
+
+---
+
+## ⚠️ Security Notice & Prudent Usage Disclaimer
+
+SysClaw is provided as an open-source server orchestration and ChatOps scaffold designed for system administrators, SREs, and DevOps practitioners.
+
+* 🔍 **Audit & Review Code Wisely**: Users and organizations are strongly encouraged to thoroughly review, audit, and understand the source code and security guardrails before deploying to mission-critical or production environments.
+* 🔄 **Routine Self-Audits**: Always conduct regular independent audits and periodic reviews of your deployed configurations, custom menus, system journals, and access whitelists to maintain continuous operational integrity.
+* ⚖️ **Operator Responsibility**: The decision to adopt, deploy, and authorize command execution via SysClaw rests entirely with the individual operator. Users assume full responsibility for their server access rules, firewall policies, and operational outcomes.
+* 🛡️ **Principle of Least Privilege**: Always enforce strict access controls, secure your credentials (`.env`), restrict whitelisted Chat IDs, and apply the principle of least privilege across all connected nodes.
 
 ---
 

@@ -67,7 +67,8 @@ def build_system_prompt() -> str:
 
 def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     """Worker task to process a single user message asynchronously."""
-    text = (text or "").strip()
+    # Strict input length guardrail (prevent token/memory flood)
+    text = (text or "").strip()[:4000]
     if not text:
         return
 
@@ -96,7 +97,7 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
             if reply:
                 telegram.send_message(chat_id, reply, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         except Exception as e:
-            print(f"[MENU ERROR] {traceback.format_exc()}", flush=True)
+            print(f"[MENU ERROR] {type(e).__name__}: {str(e)}", flush=True)
             telegram.send_message(chat_id, "⚠️ [Menu Error] An error occurred while executing the menu action.", reply_markup=get_main_keyboard(chat_id))
         return
 
@@ -119,7 +120,7 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
         # Query AI provider with user's selected engine
         ai_reply = ai_provider.chat(history, system_prompt=system_prompt, model=user_model)
     except Exception as e:
-        print(f"[AI PROVIDER EXCEPTION] {traceback.format_exc()}", flush=True)
+        print(f"[AI PROVIDER EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)
         ai_reply = "⚠️ [AI Error] Failed to reach the configured AI provider. Please check server logs."
 
     # Save assistant response to memory
@@ -136,7 +137,6 @@ def handle_incoming_callback(callback_query: dict):
 
     # Layer 1 Security: Strict Silent Drop on Unauthorized Callback
     if not is_authorized(chat_id):
-        # Silent drop: Do not reply, do not acknowledge
         return
 
     handler = get_action_handler(data)
@@ -147,7 +147,7 @@ def handle_incoming_callback(callback_query: dict):
             if res:
                 telegram.send_message(chat_id, res, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
         except Exception as e:
-            print(f"[ACTION ERROR] {traceback.format_exc()}", flush=True)
+            print(f"[ACTION ERROR] {type(e).__name__}: {str(e)}", flush=True)
             telegram.answer_callback(cb_id, text="Action execution failed.", alert=True)
     else:
         telegram.answer_callback(cb_id, text="Unknown action.")
@@ -197,7 +197,6 @@ def main():
 
                     # Layer 1: Strict Whitelist & Silent Drop
                     if not is_authorized(chat_id):
-                        # Silent drop: No reply, no leak
                         continue
 
                     # Dispatch to thread worker
@@ -206,6 +205,10 @@ def main():
                 # 2. Handle Inline Button Callbacks
                 elif "callback_query" in update:
                     cb = update["callback_query"]
+                    cb_chat_id = cb.get("message", {}).get("chat", {}).get("id")
+                    # Layer 1: Strict Whitelist check before queueing
+                    if not is_authorized(cb_chat_id):
+                        continue
                     executor.submit(handle_incoming_callback, cb)
 
         except Exception as e:

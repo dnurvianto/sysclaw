@@ -54,9 +54,12 @@ class DeepSeekProvider(BaseAIProvider):
                 message = choice.get("message", {})
                 return message.get("content", "").strip() or "⚠️ [DeepSeek] Empty response received from AI model."
         except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8", errors="ignore")
-            return f"⚠️ [DeepSeek HTTP {e.code}] {error_body}"
+            error_detail = e.read().decode("utf-8", errors="ignore")
+            print(f"[DEEPSEEK HTTP ERROR {e.code}] {error_detail}", flush=True)
+            return f"⚠️ [DeepSeek Error] Service responded with HTTP {e.code}. Please try again later."
         except urllib.error.URLError as e:
-            return f"⚠️ [DeepSeek Network Error] Failed to reach API endpoint: {e.reason}"
+            print(f"[DEEPSEEK NETWORK ERROR] {e.reason}", flush=True)
+            return "⚠️ [DeepSeek Error] Network connection to AI provider failed."
         except Exception as e:
-            return f"⚠️ [DeepSeek Exception] {str(e)}"
+            print(f"[DEEPSEEK EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)
+            return "⚠️ [DeepSeek Error] An unexpected error occurred while querying the AI provider."
