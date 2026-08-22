@@ -43,6 +43,7 @@ usage() {
     echo -e "  ${GREEN}start${NC}            Start the SysClaw background daemon"
     echo -e "  ${GREEN}stop${NC}             Stop the SysClaw daemon"
     echo -e "  ${GREEN}restart${NC}          Restart the SysClaw daemon"
+    echo -e "  ${GREEN}update${NC} | ${GREEN}upgrade${NC} Pull latest version from GitHub & restart daemon"
     echo -e "  ${GREEN}logs${NC} [-f] [-n N]   View service logs (journalctl wrapper)"
     echo -e "  ${GREEN}test${NC} | ${GREEN}doctor${NC}    Run pre-flight environment & API diagnostics"
     echo -e "  ${GREEN}install-service${NC}  Install and register systemd service"
@@ -210,6 +211,20 @@ cmd_uninstall() {
     echo -e "\n${GREEN}🎉 SysClaw has been successfully uninstalled.${NC}"
 }
 
+cmd_update() {
+    require_root
+    echo -e "${CYAN}[*] Fetching latest updates from GitHub...${NC}"
+    cd "$SYSCLAW_DIR"
+    if [ ! -d ".git" ]; then
+        echo -e "${RED}[ERROR] .git repository not found in ${SYSCLAW_DIR}.${NC}"
+        exit 1
+    fi
+    git pull origin main
+    chmod +x "${SYSCLAW_DIR}/sysclaw" "${SYSCLAW_DIR}/preflight.sh" 2>/dev/null || true
+    echo -e "${GREEN}[✓] SysClaw codebase updated successfully.${NC}\n"
+    cmd_restart
+}
+
 case "${1:-}" in
     status)
         cmd_status
@@ -222,6 +237,9 @@ case "${1:-}" in
         ;;
     restart)
         cmd_restart
+        ;;
+    update|upgrade)
+        cmd_update
         ;;
     logs|log)
         cmd_logs "$@"
