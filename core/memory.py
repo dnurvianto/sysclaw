@@ -12,6 +12,7 @@ _MEMORY_LOCK = threading.Lock()
 # In-memory storage dictionaries
 _CHAT_BUFFERS: Dict[str, List[Dict[str, str]]] = {}
 _USER_MODELS: Dict[str, str] = {}
+_USER_EFFORTS: Dict[str, str] = {}
 MAX_MESSAGE_CHARS = 4000
 
 def get_history(chat_id: str) -> List[Dict[str, str]]:
@@ -65,4 +66,18 @@ def set_user_model(chat_id: str, model_name: str) -> None:
     if clean_model:
         with _MEMORY_LOCK:
             _USER_MODELS[key] = clean_model
+
+def get_user_effort(chat_id: str) -> str:
+    """Retrieve reasoning effort for a user (low, high, max; defaults to 'high')."""
+    key = str(chat_id)
+    with _MEMORY_LOCK:
+        return _USER_EFFORTS.get(key, "high")
+
+def set_user_effort(chat_id: str, effort: str) -> None:
+    """Set reasoning effort for a specific user session."""
+    key = str(chat_id)
+    clean_effort = (effort or "").strip().lower()
+    if clean_effort in ("low", "high", "max"):
+        with _MEMORY_LOCK:
+            _USER_EFFORTS[key] = clean_effort
 

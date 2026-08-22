@@ -14,7 +14,7 @@ def register_menu(label: Union[str, Callable], row: int = 1, prefix: str = None)
     """
     Decorator to register a custom deterministic menu button.
     `label` can be a static string (e.g. "🖥️ Host Overview") 
-    or a dynamic function `label(chat_id) -> str` (e.g. lambda cid: f"⚡ Model AI: {get_user_model(cid)}").
+    or a dynamic function `label(chat_id) -> str` (e.g. lambda cid: f"⚡ AI Model: {get_user_model(cid)}").
     """
     def decorator(func: Callable):
         entry_prefix = prefix
@@ -57,8 +57,9 @@ def get_main_keyboard(chat_id: str = None) -> Dict:
         if callable(label_val):
             try:
                 button_text = label_val(chat_id)
-            except Exception:
-                button_text = str(label_val)
+            except Exception as e:
+                print(f"[KEYBOARD ERROR] Dynamic label evaluation failed: {e}", flush=True)
+                button_text = entry.get("prefix") or "Menu"
         else:
             button_text = str(label_val)
 
@@ -84,7 +85,7 @@ def get_menu_handler(text: str) -> Callable:
     if text in _MENUS:
         return _MENUS[text][0]
 
-    # 2. Match entries with prefix (e.g. "⚡ Model AI: ...")
+    # 2. Match entries with prefix (e.g. "⚡ AI Model: ...")
     for entry in _MENU_ENTRIES:
         prefix = entry.get("prefix")
         if prefix and text.startswith(prefix):

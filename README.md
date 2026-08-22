@@ -264,14 +264,27 @@ SysClaw features an **autonomous Domain Knowledge Ingestion Engine** that bridge
 
 ---
 
-## 🤖 Dynamic AI Models & Multi-Tier Engines
+## 🤖 Dynamic AI Models & Reasoning Engines
 
-Operators can dynamically toggle between inference engines directly in Telegram via the interactive `⚡ Model AI` menu button without restarting the daemon:
+Operators can dynamically toggle inference engines and adjust **Reasoning Effort** directly in Telegram via the interactive `⚡ AI Model` menu button without restarting the daemon:
 
+### 1. Supported Inference Engines
 | Tier / Model ID | Best For | Characteristics |
 | :--- | :--- | :--- |
 | **⚡ `deepseek-v4-flash`** | High Throughput / Routine DevOps | Sub-second latency (<500ms), lightweight token burn, quick configuration & log checks |
 | **🔬 `deepseek-v4-pro`** | Deep Reasoning / Incident SRE | High-capacity problem solving, intricate multi-step diagnostics, root-cause forensics |
+| **👁️ `deepseek-v4-flash-vision-exp`** | Multimodal Vision / Screenshot OCR | Visual troubleshooting for terminal panics, error screenshots, and Grafana charts |
+
+### 2. Live Reasoning Effort Control
+Fine-tune the Chain-of-Thought (CoT) reasoning depth on the fly:
+* **`LOW` (Fastest)**: Minimal reasoning overhead, lowest latency (<500ms). Perfect for routine commands and quick lookups.
+* **`HIGH` (Standard - Default)**: Deep analytical thinking. Recommended for standard DevOps troubleshooting and error log analysis.
+* **`MAX` (Deepest)**: Exhaustive reasoning exploration. Optimized for complex incident diagnostics, tricky network bugs, and multi-step root-cause investigations.
+
+### 3. 📸 Multimodal Screenshot Troubleshooting (Vision AI)
+Upload any error screenshot, terminal panic, or monitoring dashboard directly into Telegram (with or without a text caption):
+* SysClaw automatically downloads the image, encodes it into base64, and queries the multimodal reasoning engine.
+* OCR and visual reasoning diagnose errors directly from pictures without manual copy-pasting.
 
 ---
 

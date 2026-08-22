@@ -9,13 +9,14 @@
 import sys
 import time
 import signal
+import base64
 import traceback
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 import config
 from core.security import is_authorized, is_rate_limited
-from core.memory import get_history, add_message, clear_history, get_user_model
+from core.memory import get_history, add_message, clear_history, get_user_model, get_user_effort
 from core.knowledge import load_knowledge_base
 from core.router import get_main_keyboard, get_menu_handler, get_action_handler
 from providers import get_ai_provider
@@ -115,10 +116,11 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     history = get_history(str(chat_id))
     system_prompt = build_system_prompt()
     user_model = get_user_model(str(chat_id))
+    user_effort = get_user_effort(str(chat_id))
     
     try:
-        # Query AI provider with user's selected engine
-        ai_reply = ai_provider.chat(history, system_prompt=system_prompt, model=user_model)
+        # Query AI provider with user's selected engine and reasoning effort
+        ai_reply = ai_provider.chat(history, system_prompt=system_prompt, model=user_model, reasoning_effort=user_effort)
     except Exception as e:
         print(f"[AI PROVIDER EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)
         ai_reply = "⚠️ [AI Error] Failed to reach the configured AI provider. Please check server logs."
@@ -126,6 +128,57 @@ def handle_incoming_message(chat_id: int, text: str, message_id: int = None):
     # Save assistant response to memory
     add_message(str(chat_id), "assistant", ai_reply)
     
+    telegram.send_message(chat_id, ai_reply, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
+
+def handle_incoming_photo(chat_id: int, file_id: str, caption: str = "", message_id: int = None):
+    """Worker task to process uploaded screenshots / photos with DeepSeek Vision AI."""
+    # Rate Limiting Check for AI Calls
+    if is_rate_limited(chat_id):
+        telegram.send_message(chat_id, "⏳ Rate limit reached. Please wait a moment before sending your next AI request.", reply_markup=get_main_keyboard(chat_id))
+        return
+
+    telegram.send_action(chat_id, "upload_photo")
+
+    # Step 1: Retrieve file path from Telegram
+    file_info = telegram.get_file(file_id)
+    if not file_info or "file_path" not in file_info:
+        telegram.send_message(chat_id, "⚠️ [Vision Error] Failed to retrieve screenshot details from Telegram.", reply_markup=get_main_keyboard(chat_id))
+        return
+
+    # Step 2: Download raw image bytes
+    img_bytes = telegram.download_file(file_info["file_path"])
+    if not img_bytes:
+        telegram.send_message(chat_id, "⚠️ [Vision Error] Failed to download image from Telegram servers.", reply_markup=get_main_keyboard(chat_id))
+        return
+
+    # Step 3: Base64 encode for DeepSeek Multimodal API
+    img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+    file_path = file_info.get("file_path", "")
+    mime_type = "image/png" if file_path.lower().endswith(".png") else "image/jpeg"
+
+    # Set user query
+    caption_text = (caption or "").strip()
+    query_text = caption_text if caption_text else "Please analyze this screenshot/image and provide technical troubleshooting, log diagnosis, or architectural feedback."
+
+    telegram.send_action(chat_id, "typing")
+
+    # Save to sliding window context in RAM
+    history_label = f"📸 [Screenshot Uploaded] {caption_text}".strip() if caption_text else "📸 [Screenshot Uploaded]"
+    add_message(str(chat_id), "user", history_label)
+
+    history = get_history(str(chat_id))
+    system_prompt = build_system_prompt()
+    user_model = get_user_model(str(chat_id))
+    user_effort = get_user_effort(str(chat_id))
+
+    try:
+        ai_reply = ai_provider.chat(history, system_prompt=system_prompt, model=user_model, image_b64=img_b64, image_mime=mime_type, reasoning_effort=user_effort)
+    except Exception as e:
+        print(f"[AI VISION EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)
+        ai_reply = "⚠️ [AI Vision Error] An error occurred while analyzing the image."
+
+    # Save assistant response
+    add_message(str(chat_id), "assistant", ai_reply)
     telegram.send_message(chat_id, ai_reply, reply_markup=get_main_keyboard(chat_id), parse_mode="Markdown")
 
 def handle_incoming_callback(callback_query: dict):
@@ -156,7 +209,7 @@ def main():
     """Main execution loop (HTTP Long Polling)."""
     print("=" * 65)
     print(" 🐾 SysClaw - Server Orchestrator & AI ChatOps Scaffold")
-    print(f" 🚀 Version: 1.2.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
+    print(f" 🚀 Version: 1.3.0 | AI Provider: {config.AI_PROVIDER.upper()} ({config.AI_MODEL})")
     print(f" 🐧 Host OS: {target_node.get_os_info()}")
     print("=" * 65, flush=True)
 
@@ -188,19 +241,27 @@ def main():
             for update in updates:
                 offset = update.get("update_id", offset) + 1
 
-                # 1. Handle Standard Text Messages
+                # 1. Handle Messages (Text or Photo)
                 if "message" in update:
                     msg = update["message"]
                     chat_id = msg.get("chat", {}).get("id")
-                    text = msg.get("text", "")
                     msg_id = msg.get("message_id")
 
                     # Layer 1: Strict Whitelist & Silent Drop
                     if not is_authorized(chat_id):
                         continue
 
-                    # Dispatch to thread worker
-                    executor.submit(handle_incoming_message, chat_id, text, msg_id)
+                    # Check for Photo / Screenshot upload
+                    if "photo" in msg:
+                        photo_list = msg.get("photo", [])
+                        if photo_list:
+                            # Largest photo is the last item in list
+                            file_id = photo_list[-1].get("file_id")
+                            caption = msg.get("caption", "")
+                            executor.submit(handle_incoming_photo, chat_id, file_id, caption, msg_id)
+                    elif "text" in msg:
+                        text = msg.get("text", "")
+                        executor.submit(handle_incoming_message, chat_id, text, msg_id)
 
                 # 2. Handle Inline Button Callbacks
                 elif "callback_query" in update:

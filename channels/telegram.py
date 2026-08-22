@@ -113,3 +113,20 @@ class TelegramChannel(BaseChannel):
             params["text"] = text
             params["show_alert"] = alert
         self._request("answerCallbackQuery", params=params, timeout=5)
+
+    def get_file(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch metadata and remote path for a Telegram file."""
+        return self._request("getFile", params={"file_id": file_id}, timeout=15)
+
+    def download_file(self, file_path: str) -> Optional[bytes]:
+        """Download raw binary content of a file from Telegram servers."""
+        if not self.token or not file_path:
+            return None
+        url = f"https://api.telegram.org/file/bot{self.token}/{file_path}"
+        req = urllib.request.Request(url, headers={"User-Agent": "SysClaw-Orchestrator/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read()
+        except Exception as e:
+            print(f"[TELEGRAM FILE DOWNLOAD ERROR] {str(e)}", flush=True)
+            return None
