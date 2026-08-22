@@ -219,7 +219,8 @@ cmd_update() {
         echo -e "${RED}[ERROR] .git repository not found in ${SYSCLAW_DIR}.${NC}"
         exit 1
     fi
-    git pull origin main
+    git fetch origin main
+    git reset --hard origin/main
     chmod +x "${SYSCLAW_DIR}/sysclaw" "${SYSCLAW_DIR}/preflight.sh" 2>/dev/null || true
     echo -e "${GREEN}[✓] SysClaw codebase updated successfully.${NC}\n"
     cmd_restart
